@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using dnlib.DotNet.Emit;
 using dnlib.DotNet;
+using System.Text.RegularExpressions;
+using System.Security.Cryptography;
 
 namespace Obfuscate
 {
@@ -88,6 +90,58 @@ namespace Obfuscate
 
         }
 
+        public static void RandomOutlinedMethods(ModuleDef module)
+        {
+            foreach (var type in module.Types)
+            {
+                foreach (var method in type.Methods.ToArray())
+                {
+                    MethodDef strings = CreateReturnMethodDef(RandomString(), method);
+                    MethodDef ints = CreateReturnMethodDef(RandomInt(), method);
+                    type.Methods.Add(strings);
+                    type.Methods.Add(ints);
+                }
+            }
+        }
+        public static string RandomString()
+        {
+            const string chars = "ABCD1234";
+            return new string(Enumerable.Repeat(chars, 10)
+                .Select(s => s[new Random(Guid.NewGuid().GetHashCode()).Next(s.Length)]).ToArray());
+        }
+
+        public static int RandomInt()
+        {
+            var ints = Convert.ToInt32(Regex.Match(Guid.NewGuid().ToString(), @"\d+").Value);
+            return new Random(ints).Next(0, 99999999);
+        }
+        private static MethodDef CreateReturnMethodDef(object value, MethodDef source_method)
+        {
+            CorLibTypeSig corlib = null;
+
+            if (value is int)
+                corlib = source_method.Module.CorLibTypes.Int32;
+            else if (value is float)
+                corlib = source_method.Module.CorLibTypes.Single;
+            else if (value is string)
+                corlib = source_method.Module.CorLibTypes.String;
+            MethodDef newMethod = new MethodDefUser(RandomString(),
+                    MethodSig.CreateStatic(corlib),
+                    MethodImplAttributes.IL | MethodImplAttributes.Managed,
+                    MethodAttributes.Public | MethodAttributes.Static | MethodAttributes.HideBySig)
+            {
+                Body = new CilBody()
+            };
+            if (value is int)
+                newMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4, (int)value));
+            else if (value is float)
+                newMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_R4, (double)value));
+            else if (value is string)
+                newMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, (string)value));
+            newMethod.Body.Instructions.Add(new Instruction(OpCodes.Ret));
+            return newMethod;
+        }
+
         public static void obfuscate_assembly_info(ModuleDef md)
         {
             string encName = random_string(10);
@@ -111,7 +165,7 @@ namespace Obfuscate
             md.Name = random_string(10);
 
             obfuscate_strings(md);
-            //obfuscate_methods(md);
+            RandomOutlinedMethods(md);
             obfuscate_classes(md);
             obfuscate_namespace(md);
             obfuscate_assembly_info(md);
