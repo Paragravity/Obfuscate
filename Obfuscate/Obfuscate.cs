@@ -68,27 +68,6 @@ namespace Obfuscate
 
         }
 
-        public static void obfuscate_classes(ModuleDef md)
-        {
-            foreach (var type in md.GetTypes())
-            {
-                string encName = random_string(10);
-                Console.WriteLine($"{type.Name} -> {encName}");
-                type.Name = encName;
-            }
-
-        }
-
-        public static void obfuscate_namespace(ModuleDef md)
-        {
-            foreach (var type in md.GetTypes())
-            {
-                string encName = random_string(10);
-                Console.WriteLine($"{type.Namespace} -> {encName}");
-                type.Namespace = encName;
-            }
-
-        }
 
         public static void RandomOutlinedMethods(ModuleDef module)
         {
@@ -166,9 +145,7 @@ namespace Obfuscate
 
             obfuscate_strings(md);
             RandomOutlinedMethods(md);
-            obfuscate_classes(md);
-            obfuscate_namespace(md);
-            obfuscate_assembly_info(md);
+            //obfuscate_assembly_info(md);
 
             clean_asm(md);
 
